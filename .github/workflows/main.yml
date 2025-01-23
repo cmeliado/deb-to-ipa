@@ -1,30 +1,34 @@
-name: Run
+name: DebToIPA
 
 on:
   workflow_dispatch:
     inputs:
       deb:
-        description: "https://1drv.ms/u/c/25d6366222ca9170/EcrG1S89XLVPlSQ7mTcF6EcBdZKOlve5-orppDG-KJkjFQ?e=gBUhBk"
+        description: "https://1drv.ms/u/c/25d6366222ca9170/EcrG1S89XLVPlSQ7mTcF6EcBdZKOlve5-orppDG-KJkjFQ?e=4nRUou"
         required: true
 
 jobs:
-  run:
+  convert:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Convert deb to IPA
+      - name: Set up job
         run: |
-          curl -L -o ${{ github.workspace }}/app.deb "${{ github.event.inputs.deb }}"
-          dpkg-deb -X ${{ github.workspace }}/app.deb ${{ github.workspace }}/app
-
-          mkdir -p ${{ github.workspace }}/ipa/Payload
-          cp -R ${{ github.workspace }}/app/Applications/* ${{ github.workspace }}/ipa/Payload
-          
-          cd ${{ github.workspace }}/ipa
-          zip -r ${{ github.workspace }}/App.ipa .
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
+          sudo apt-get update
+          sudo apt-get install -y dpkg wget zip
+      - name: Download .deb file
+        run: wget ${{ github.event.inputs.deb }} -O package.deb
+      - name: Convert .deb to .ipa
+        run: |
+          mkdir output
+          dpkg-deb -x package.deb output/
+          cd output/Applications
+          mkdir Payload
+          mv *.app Payload/
+          cd ..
+          zip -r9 app.ipa Payload/
+      - name: Upload .ipa file
+        uses: actions/upload-artifact@v2
         with:
-          name: App
-          path: ${{ github.workspace }}/App.ipa
+          name: app-ipa
+          path: output/app.ipa
+
